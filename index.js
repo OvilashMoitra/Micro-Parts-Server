@@ -15,6 +15,8 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 const productsCollection = client.db("microparts").collection("products");
 const usersCollection = client.db("microparts").collection("users");
 const cartCollection = client.db("microparts").collection("cart");
+// Stripe
+const stripe = require("stripe")('sk_test_51L1c26AQe13D7JV445RLBZTVrVHrVl6aC4EeaLlsTVOGhvgwxoh5YxiRKKYzrcozo7mvFdLRrR0uwiU3CAeRLe8800O5amBNFk');
 
 async function run() {
     try {
@@ -72,7 +74,43 @@ async function run() {
             const service = await cartCollection.find(query).toArray();
             res.send(service);
         })
+        // cart product
+        app.get('/cart/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const product = await cartCollection.findOne(query);
+            res.send(product);
+        })
+        // payment api
+        app.post("/create-payment-intent", async (req, res) => {
+            const { price } = req.body;
 
+            // Create a PaymentIntent with the order amount and currency
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: price * 100,
+                currency: "eur",
+                automatic_payment_methods: {
+                    enabled: true,
+                },
+            });
+
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+        });
+        // update cart
+        app.put('/cart/:id', async (req, res) => {
+            const updatedProduct = req.body;
+            const id = req.params.id
+            console.log(id)
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: { paidStaus: updatedProduct?.paidStaus, transitionID: updatedProduct?.transactionId }
+            };
+            const result = await productsCollection.updateOne(filter, updateDoc, options);
+            res.send(result);
+        })
     } finally {
         //   await client.close();
     }
