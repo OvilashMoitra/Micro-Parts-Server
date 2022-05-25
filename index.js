@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
 const cors = require('cors');
@@ -14,11 +14,8 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 const productsCollection = client.db("microparts").collection("products");
 const usersCollection = client.db("microparts").collection("users");
-// Encode JWT TOKEN
-// const encodedToken = (email) => {
-//     const token = jwt.sign(email, process.env.JWT_SECRECT_KEY, { expiresIn: '1h' });
-//     return token
-// }
+const cartCollection = client.db("microparts").collection("cart");
+
 async function run() {
     try {
         await client.connect();
@@ -43,6 +40,39 @@ async function run() {
             res.send({ 'token': JWT });
         })
         // Get a specific product Data
+        app.get('/product/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: ObjectId(id) }
+            const result = await productsCollection.findOne(query)
+            res.send(result)
+        })
+        // Product Quantity Update
+        app.put('/products/:id', async (req, res) => {
+            const updatedProduct = req.body;
+            const id = req.params.id
+            console.log(id)
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: { stock: updatedProduct?.stock }
+            };
+            const result = await productsCollection.updateOne(filter, updateDoc, options);
+            res.send(result);
+        })
+        // Add to cart
+        app.post('/cart', async (req, res) => {
+            const product = req.body;
+            const result = await cartCollection.insertOne(product);
+            res.send(result);
+        })
+        // Get Cart Product for specific User
+        app.get('/cartedItem', async (req, res) => {
+            const email = req.query.email;
+            const query = { email };
+            const service = await cartCollection.find(query).toArray();
+            res.send(service);
+        })
+
     } finally {
         //   await client.close();
     }
