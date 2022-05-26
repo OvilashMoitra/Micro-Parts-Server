@@ -48,6 +48,11 @@ async function run() {
             const email = req.query.email
             console.log(email)
             const filter = { email };
+            // const user = await usersCollection.findOne(filter);
+            // if (user?.role === 'admin') {
+            //     const JWT = jwt.sign({ email: email }, process.env.JWT_SECRECT_KEY, { expiresIn: '1h' })
+            //     res.send({ 'token': JWT });
+            // }
             const options = { upsert: true };
             const updateDoc = {
                 $set: newUser,
@@ -64,9 +69,10 @@ async function run() {
             res.send(user);
         })
         // get All user
-        app.get('/alluser', async (res, req) => {
+        app.get('/alluser', async (req, res) => {
             const query = {}
-            const users = usersCollection.find(query).toArray();
+            const cursor = usersCollection.find(query);
+            const users = await cursor.toArray();
             res.send(users);
         })
         // Get a specific product Data
@@ -75,6 +81,18 @@ async function run() {
             const query = { _id: ObjectId(id) }
             const result = await productsCollection.findOne(query)
             res.send(result)
+        })
+        // make someone admin
+        app.put('/users', async (req, res) => {
+            const updatedStatus = req.body;
+            const email = req.query.email
+            const filter = { email };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: { role: updatedStatus?.role }
+            };
+            const result = await usersCollection.updateOne(filter, updateDoc, options);
+            res.send(result);
         })
         // Product Quantity Update
         app.put('/products/:id', async (req, res) => {
