@@ -57,11 +57,11 @@ async function run() {
             res.send({ 'token': JWT });
         })
         // get user
-        app.get('/user', async (req, res) => {
+        app.get('/user', verifyJWT, async (req, res) => {
             const email = req.query.email;
             const query = { email };
-            const service = await usersCollection.findOne(query);
-            res.send(service);
+            const user = await usersCollection.findOne(query);
+            res.send(user);
         })
         // Get a specific product Data
         app.get('/product/:id', async (req, res) => {
@@ -122,7 +122,7 @@ async function run() {
             });
         });
         // update cart
-        app.put('/cart/:id', async (req, res) => {
+        app.put('/cart/:id', verifyJWT, async (req, res) => {
             const updatedProduct = req.body;
             const id = req.params.id
             console.log(req.body)
@@ -138,6 +138,18 @@ async function run() {
         app.post('/review', async (req, res) => {
             const newService = req.body;
             const result = await reviewCollection.insertOne(newService);
+            res.send(result);
+        })
+        // update Profile
+        app.put('/updateProfile', async (req, res) => {
+            const updatedProfile = req.body;
+            const email = req.query.email
+            const filter = { email };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: { city: updatedProfile?.city, education: updatedProfile?.education, linkedInProfile: updatedProfile?.linkedin }
+            };
+            const result = await usersCollection.updateOne(filter, updateDoc, options);
             res.send(result);
         })
     } finally {
