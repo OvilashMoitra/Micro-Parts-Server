@@ -15,9 +15,24 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 const productsCollection = client.db("microparts").collection("products");
 const usersCollection = client.db("microparts").collection("users");
 const cartCollection = client.db("microparts").collection("cart");
+const reviewCollection = client.db("microparts").collection("review");
 // Stripe
 const stripe = require("stripe")('sk_test_51L1c26AQe13D7JV445RLBZTVrVHrVl6aC4EeaLlsTVOGhvgwxoh5YxiRKKYzrcozo7mvFdLRrR0uwiU3CAeRLe8800O5amBNFk');
-
+// verify jwt
+function verifyJWT(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: 'UnAuthorized access' });
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.JWT_SECRECT_KEY, function (err, decoded) {
+        if (err) {
+            return res.status(403).send({ message: 'Forbidden access' })
+        }
+        req.decoded = decoded;
+        next();
+    });
+}
 async function run() {
     try {
         await client.connect();
@@ -75,19 +90,20 @@ async function run() {
             res.send(service);
         })
         // cart product
-        app.get('/cart/:id', verifyJWT, async (req, res) => {
+        app.get('/cart/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const product = await cartCollection.findOne(query);
+            console.log(product);
             res.send(product);
         })
         // payment api
-        app.post("/create-payment-intent", async (req, res) => {
-            const { price } = req.body;
-
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            console.log(req.body)
+            const { totalPrice } = req.body;
             // Create a PaymentIntent with the order amount and currency
             const paymentIntent = await stripe.paymentIntents.create({
-                amount: price * 100,
+                amount: parseInt(totalPrice.total) * 100,
                 currency: "eur",
                 automatic_payment_methods: {
                     enabled: true,
@@ -102,13 +118,19 @@ async function run() {
         app.put('/cart/:id', async (req, res) => {
             const updatedProduct = req.body;
             const id = req.params.id
-            console.log(id)
+            console.log(req.body)
             const filter = { _id: ObjectId(id) };
             const options = { upsert: true };
             const updateDoc = {
-                $set: { paidStaus: updatedProduct?.paidStaus, transitionID: updatedProduct?.transactionId }
+                $set: { 'paidStaus': 'paid', 'transitionID': updatedProduct?.transactionId }
             };
-            const result = await productsCollection.updateOne(filter, updateDoc, options);
+            const result = await cartCollection.updateOne(filter, updateDoc, options);
+            res.send(result);
+        })
+        // Review Adding
+        app.post('/review', async (req, res) => {
+            const newService = req.body;
+            const result = await reviewCollection.insertOne(newService);
             res.send(result);
         })
     } finally {
