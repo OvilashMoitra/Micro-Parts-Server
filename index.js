@@ -63,6 +63,12 @@ async function run() {
             const user = await usersCollection.findOne(query);
             res.send(user);
         })
+        // get All user
+        app.get('/alluser', async (res, req) => {
+            const query = {}
+            const users = usersCollection.find(query).toArray();
+            res.send(users);
+        })
         // Get a specific product Data
         app.get('/product/:id', async (req, res) => {
             const id = req.params.id
