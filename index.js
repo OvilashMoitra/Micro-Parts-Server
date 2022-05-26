@@ -56,6 +56,13 @@ async function run() {
             const JWT = jwt.sign({ email: email }, process.env.JWT_SECRECT_KEY, { expiresIn: '1h' })
             res.send({ 'token': JWT });
         })
+        // get user
+        app.get('/user', async (req, res) => {
+            const email = req.query.email;
+            const query = { email };
+            const service = await usersCollection.findOne(query);
+            res.send(service);
+        })
         // Get a specific product Data
         app.get('/product/:id', async (req, res) => {
             const id = req.params.id
