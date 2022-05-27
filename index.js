@@ -166,7 +166,7 @@ async function run() {
             const filter = { _id: ObjectId(id) };
             const options = { upsert: true };
             const updateDoc = {
-                $set: { 'paidStaus': 'paid', 'transitionID': updatedProduct?.transactionId, 'shippingStatus': updatedProduct?.shippingStatus }
+                $set: { 'shippingStatus': updatedProduct?.shippingStatus }
             };
             const result = await cartCollection.updateOne(filter, updateDoc, options);
             res.send(result);
@@ -190,11 +190,18 @@ async function run() {
             res.send(result);
         })
         // Load all the carted Item
-        app.get('/cartedItem', async (req, res) => {
+        app.get('/allcartedproduct', async (req, res) => {
             const query = {}
             const cursor = cartCollection.find(query);
             const products = await cursor.toArray();
             res.send(products);
+        })
+        // Delete a product from Cart
+        app.delete('/cartedItem/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) }
+            const result = await cartCollection.deleteOne(query);
+            res.send(result);
         })
 
     } finally {
