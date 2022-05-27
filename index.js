@@ -145,7 +145,7 @@ async function run() {
                 clientSecret: paymentIntent.client_secret,
             });
         });
-        // update cart
+        // update cart after payment
         app.put('/cart/:id', verifyJWT, async (req, res) => {
             const updatedProduct = req.body;
             const id = req.params.id
@@ -153,7 +153,20 @@ async function run() {
             const filter = { _id: ObjectId(id) };
             const options = { upsert: true };
             const updateDoc = {
-                $set: { 'paidStaus': 'paid', 'transitionID': updatedProduct?.transactionId }
+                $set: { 'paidStaus': 'paid', 'transitionID': updatedProduct?.transactionId, 'shippingStatus': updatedProduct?.shippingStatus }
+            };
+            const result = await cartCollection.updateOne(filter, updateDoc, options);
+            res.send(result);
+        })
+        // update cart by Admin
+        app.put('/cart/:id', verifyJWT, async (req, res) => {
+            const updatedProduct = req.body;
+            const id = req.params.id
+            console.log(req.body)
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: { 'paidStaus': 'paid', 'transitionID': updatedProduct?.transactionId, 'shippingStatus': updatedProduct?.shippingStatus }
             };
             const result = await cartCollection.updateOne(filter, updateDoc, options);
             res.send(result);
@@ -176,6 +189,14 @@ async function run() {
             const result = await usersCollection.updateOne(filter, updateDoc, options);
             res.send(result);
         })
+        // Load all the carted Item
+        app.get('/cartedItem', async (req, res) => {
+            const query = {}
+            const cursor = cartCollection.find(query);
+            const products = await cursor.toArray();
+            res.send(products);
+        })
+
     } finally {
         //   await client.close();
     }
