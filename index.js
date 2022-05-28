@@ -113,6 +113,12 @@ async function run() {
             const result = await cartCollection.insertOne(product);
             res.send(result);
         })
+        //Add a new Product by Admin
+        app.post('/addproduct', async (req, res) => {
+            const product = req.body
+            const result = await productsCollection.insertOne(product)
+            res.send(result)
+        })
         // Get Cart Product for specific User
         app.get('/cartedItem', async (req, res) => {
             const email = req.query.email;
@@ -177,6 +183,12 @@ async function run() {
             const result = await reviewCollection.insertOne(newService);
             res.send(result);
         })
+        // Get Review
+        app.get('/review', async (req, res) => {
+            const query = {}
+            const reviews = await reviewCollection.find(query).toArray();
+            res.send(reviews)
+        })
         // update Profile
         app.put('/updateProfile', async (req, res) => {
             const updatedProfile = req.body;
@@ -203,7 +215,14 @@ async function run() {
             const result = await cartCollection.deleteOne(query);
             res.send(result);
         })
-
+        // Delete a product from Main Menu
+        app.delete('/product/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) }
+            const result = await productsCollection.deleteOne(query);
+            res.send(result);
+        })
+        // Add review to server
     } finally {
         //   await client.close();
     }
